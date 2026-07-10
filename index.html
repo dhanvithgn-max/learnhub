@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#FF6B35">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="LearnHub">
+    <meta name="description" content="Interactive learning platform for Classes 1-10. Learn Math, Science, English & Social Studies.">
+    <meta name="mobile-web-app-capable" content="yes">
+    <title>LearnHub | Learn by doing</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icons/icon-192x192.png">
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="logo">
+                <span class="logo-icon">◆</span>
+                <span class="logo-text">LearnHub</span>
+            </div>
+            <div class="nav-links">
+                <a href="#" class="nav-link" onclick="showPage('home')">Home</a>
+                <a href="#" class="nav-link" onclick="showPage('courses')">Courses</a>
+                <a href="#" class="nav-link" onclick="showPage('progress')">My Progress</a>
+            </div>
+            <div class="nav-actions">
+                <span class="grade-badge" id="grade-badge" onclick="showGradeModal()" style="display:none;">Class <span id="current-grade-display">4</span></span>
+                <span class="user-name" id="user-name" style="display:none;" onclick="showProfile()"></span>
+                <button class="btn-signin" id="btn-signin" onclick="showSignInModal()">Sign In</button>
+                <button class="btn-getstarted" id="btn-signup" onclick="showSignUpModal()">Sign Up</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Grade Selection Modal -->
+    <div class="modal-overlay" id="grade-modal" style="display:none;">
+        <div class="modal-content">
+            <button class="modal-close" onclick="closeGradeModal()">×</button>
+            <div class="modal-icon">🎓</div>
+            <h2>Welcome to LearnHub!</h2>
+            <p>Which class are you in? We'll customize lessons just for you.</p>
+            <div class="grade-options">
+                <button class="grade-btn" onclick="selectGrade(1)">Class 1</button>
+                <button class="grade-btn" onclick="selectGrade(2)">Class 2</button>
+                <button class="grade-btn" onclick="selectGrade(3)">Class 3</button>
+                <button class="grade-btn" onclick="selectGrade(4)">Class 4</button>
+                <button class="grade-btn" onclick="selectGrade(5)">Class 5</button>
+                <button class="grade-btn" onclick="selectGrade(6)">Class 6</button>
+                <button class="grade-btn" onclick="selectGrade(7)">Class 7</button>
+                <button class="grade-btn" onclick="selectGrade(8)">Class 8</button>
+                <button class="grade-btn" onclick="selectGrade(9)">Class 9</button>
+                <button class="grade-btn" onclick="selectGrade(10)">Class 10</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sign In Modal -->
+    <div class="modal-overlay" id="signin-modal" style="display:none;">
+        <div class="modal-content">
+            <button class="modal-close" onclick="closeSignInModal()">×</button>
+            <div class="modal-icon">👋</div>
+            <h2>Welcome Back!</h2>
+            <p>Sign in to continue your learning journey</p>
+            <form id="signin-form" onsubmit="handleSignIn(event)">
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="email" id="signin-email" placeholder="your@email.com" required>
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" id="signin-password" placeholder="Enter password" required>
+                </div>
+                <button type="submit" class="btn-primary btn-full">Sign In</button>
+                <p class="form-link">Don't have an account? <a href="#" onclick="switchToSignUp()">Sign Up</a></p>
+            </form>
+        </div>
+    </div>
+
+    <!-- Sign Up Modal -->
+    <div class="modal-overlay" id="signup-modal" style="display:none;">
+        <div class="modal-content">
+            <button class="modal-close" onclick="closeSignUpModal()">×</button>
+            <div class="modal-icon">🚀</div>
+            <h2>Join LearnHub!</h2>
+            <p>Create your account and start learning</p>
+            <form id="signup-form" onsubmit="handleSignUp(event)">
+                <div class="form-group">
+                    <label>Full Name</label>
+                    <input type="text" id="signup-name" placeholder="Your name" required>
+                </div>
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="email" id="signup-email" placeholder="your@email.com" required>
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" id="signup-password" placeholder="Min 6 characters" minlength="6" required>
+                </div>
+                <button type="submit" class="btn-primary btn-full">Create Account</button>
+                <p class="form-link">Already have an account? <a href="#" onclick="switchToSignIn()">Sign In</a></p>
+            </form>
+        </div>
+    </div>
+
+    <!-- Profile Modal -->
+    <div class="modal-overlay" id="profile-modal" style="display:none;">
+        <div class="modal-content">
+            <button class="modal-close" onclick="closeProfileModal()">×</button>
+            <div class="modal-icon">👤</div>
+            <h2 id="profile-name">User</h2>
+            <p id="profile-email">user@email.com</p>
+            <div class="profile-stats">
+                <div class="profile-stat">
+                    <span class="stat-value" id="profile-points">0</span>
+                    <span class="stat-label">Points</span>
+                </div>
+                <div class="profile-stat">
+                    <span class="stat-value" id="profile-lessons">0</span>
+                    <span class="stat-label">Lessons</span>
+                </div>
+                <div class="profile-stat">
+                    <span class="stat-value" id="profile-streak">0</span>
+                    <span class="stat-label">Streak</span>
+                </div>
+            </div>
+            <button class="btn-primary btn-full" onclick="handleSignOut()">Sign Out</button>
+        </div>
+    </div>
+
+    <!-- Home Page -->
+    <div id="home-page" class="page active">
+        <!-- Hero Section -->
+        <section class="hero">
+            <div class="hero-container">
+                <div class="hero-content">
+                    <h1 class="hero-title">
+                        A world-class tutor<br>
+                        for every <span class="highlight">student</span>
+                    </h1>
+                    <p class="hero-subtitle">
+                        Your personal tutor for 4th standard subjects. Learn by doing with interactive lessons that make concepts click.
+                    </p>
+                    <div class="hero-buttons">
+                        <button class="btn-primary" onclick="state.grade ? showPage('courses') : showGradeModal()">Start Learning</button>
+                        <button class="btn-secondary" onclick="window.location.href='install.html'">📱 Install App</button>
+                    </div>
+                    <div class="hero-stats">
+                        <div class="stat">
+                            <span class="stat-number">100+</span>
+                            <span class="stat-label">Interactive Lessons</span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-number">4</span>
+                            <span class="stat-label">Subjects</span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-number">1000+</span>
+                            <span class="stat-label">Problems to Solve</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="hero-visual">
+                    <div class="floating-cards">
+                        <div class="float-card card-math">
+                            <span class="card-icon">📐</span>
+                            <span class="card-text">Math</span>
+                        </div>
+                        <div class="float-card card-science">
+                            <span class="card-icon">🔬</span>
+                            <span class="card-text">Science</span>
+                        </div>
+                        <div class="float-card card-english">
+                            <span class="card-icon">📖</span>
+                            <span class="card-text">English</span>
+                        </div>
+                        <div class="float-card card-social">
+                            <span class="card-icon">🌍</span>
+                            <span class="card-text">Social Studies</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Features Section -->
+        <section class="features">
+            <div class="section-container">
+                <h2 class="section-title">Award-winning<br>learning that's effective<br>and fun</h2>
+                <div class="features-grid">
+                    <div class="feature-card">
+                        <div class="feature-icon">🎯</div>
+                        <h3>Concepts that click</h3>
+                        <p>Every lesson is visual and interactive. Play with concepts until they click.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">🧠</div>
+                        <h3>Built to make you think</h3>
+                        <p>Work through problems step-by-step, building your intuition along the way.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">📊</div>
+                        <h3>Tracks your progress</h3>
+                        <p>We track what you've mastered and build practice around the gaps.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">🏆</div>
+                        <h3>Designed to keep you learning</h3>
+                        <p>Streaks, levels, and daily goals motivate you to keep moving forward.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Subjects Preview -->
+        <section class="subjects-preview">
+            <div class="section-container">
+                <h2 class="section-title">From basic to advanced</h2>
+                <div class="subjects-tabs">
+                    <button class="subject-tab active" data-subject="math">Math</button>
+                    <button class="subject-tab" data-subject="science">Science</button>
+                    <button class="subject-tab" data-subject="english">English</button>
+                    <button class="subject-tab" data-subject="social">Social Studies</button>
+                </div>
+                <div class="subjects-content">
+                    <div class="subject-detail active" id="math-detail">
+                        <div class="subject-info">
+                            <h3>Mathematics</h3>
+                            <ul class="topic-list">
+                                <li>Number Sense & Place Value</li>
+                                <li>Addition & Subtraction</li>
+                                <li>Multiplication & Division</li>
+                                <li>Fractions & Decimals</li>
+                                <li>Geometry & Measurement</li>
+                                <li>Data Handling</li>
+                            </ul>
+                            <button class="btn-primary" onclick="startSubject('math')">Start Learning</button>
+                        </div>
+                        <div class="subject-preview">
+                            <div class="preview-card">
+                                <span class="preview-number">12</span>
+                                <span class="preview-op">×</span>
+                                <span class="preview-number">8</span>
+                                <span class="preview-equal">=</span>
+                                <span class="preview-answer">?</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="subject-detail" id="science-detail">
+                        <div class="subject-info">
+                            <h3>Science</h3>
+                            <ul class="topic-list">
+                                <li>Matter & Materials</li>
+                                <li>Living Things</li>
+                                <li>Force & Motion</li>
+                                <li>Energy & Heat</li>
+                                <li>Earth & Space</li>
+                                <li>Plants & Animals</li>
+                            </ul>
+                            <button class="btn-primary" onclick="startSubject('science')">Start Learning</button>
+                        </div>
+                        <div class="subject-preview">
+                            <div class="preview-card">
+                                <span class="preview-emoji">🔬</span>
+                                <span class="preview-text">Explore the microscopic world!</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="subject-detail" id="english-detail">
+                        <div class="subject-info">
+                            <h3>English</h3>
+                            <ul class="topic-list">
+                                <li>Grammar & Punctuation</li>
+                                <li>Vocabulary Building</li>
+                                <li>Reading Comprehension</li>
+                                <li>Writing Skills</li>
+                                <li>Poetry & Literature</li>
+                                <li>Speaking & Listening</li>
+                            </ul>
+                            <button class="btn-primary" onclick="startSubject('english')">Start Learning</button>
+                        </div>
+                        <div class="subject-preview">
+                            <div class="preview-card">
+                                <span class="preview-emoji">📝</span>
+                                <span class="preview-text">Master the art of words!</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="subject-detail" id="social-detail">
+                        <div class="subject-info">
+                            <h3>Social Studies</h3>
+                            <ul class="topic-list">
+                                <li>Indian History</li>
+                                <li>Geography & Maps</li>
+                                <li>Civics & Government</li>
+                                <li>Culture & Traditions</li>
+                                <li>Economics Basics</li>
+                                <li>World Around Us</li>
+                            </ul>
+                            <button class="btn-primary" onclick="startSubject('social')">Start Learning</button>
+                        </div>
+                        <div class="subject-preview">
+                            <div class="preview-card">
+                                <span class="preview-emoji">🌍</span>
+                                <span class="preview-text">Discover our amazing world!</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Testimonials -->
+        <section class="testimonials">
+            <div class="section-container">
+                <h2 class="section-title">Students love us</h2>
+                <div class="testimonials-grid">
+                    <div class="testimonial-card">
+                        <div class="testimonial-text">
+                            "I finally understand fractions! The interactive lessons make it so easy."
+                        </div>
+                        <div class="testimonial-author">
+                            <div class="author-avatar">A</div>
+                            <div class="author-info">
+                                <span class="author-name">Arjun</span>
+                                <span class="author-grade">4th Grader</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="testimonial-card">
+                        <div class="testimonial-text">
+                            "My daughter loves doing her lessons on LearnHub. She's always excited to learn more!"
+                        </div>
+                        <div class="testimonial-author">
+                            <div class="author-avatar">P</div>
+                            <div class="author-info">
+                                <span class="author-name">Priya's Parent</span>
+                                <span class="author-grade">Parent</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="testimonial-card">
+                        <div class="testimonial-text">
+                            "Best learning app ever! I've completed 50 lessons and my scores have improved."
+                        </div>
+                        <div class="testimonial-author">
+                            <div class="author-avatar">R</div>
+                            <div class="author-info">
+                                <span class="author-name">Rohan</span>
+                                <span class="author-grade">4th Grader</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- CTA Section -->
+        <section class="cta">
+            <div class="section-container">
+                <h2>Ready to start learning?</h2>
+                <p>Join thousands of students mastering their 4th standard subjects</p>
+                <button class="btn-primary btn-large" onclick="showPage('courses')">Get Started Free</button>
+            </div>
+        </section>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <div class="footer-container">
+                <div class="footer-brand">
+                    <span class="logo-icon">◆</span>
+                    <span class="logo-text">LearnHub</span>
+                    <p>Learn by doing. Made for 4th standard students.</p>
+                </div>
+                <div class="footer-links">
+                    <div class="footer-col">
+                        <h4>Subjects</h4>
+                        <a href="#">Math</a>
+                        <a href="#">Science</a>
+                        <a href="#">English</a>
+                        <a href="#">Social Studies</a>
+                    </div>
+                    <div class="footer-col">
+                        <h4>Company</h4>
+                        <a href="#">About Us</a>
+                        <a href="#">Careers</a>
+                        <a href="#">Blog</a>
+                    </div>
+                    <div class="footer-col">
+                        <h4>Support</h4>
+                        <a href="#">Help Center</a>
+                        <a href="#">Contact</a>
+                        <a href="#">Privacy</a>
+                    </div>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>© 2026 LearnHub. All rights reserved.</p>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Courses Page -->
+    <div id="courses-page" class="page">
+        <div class="page-header">
+            <h1>Choose a Subject</h1>
+            <p>Select a subject to start learning</p>
+        </div>
+        <div class="courses-container">
+            <div class="course-card" onclick="startSubject('math')">
+                <div class="course-icon">📐</div>
+                <div class="course-info">
+                    <h3>Mathematics</h3>
+                    <p>Numbers, operations, geometry, and more</p>
+                    <div class="course-meta">
+                        <span class="lessons-count">24 Lessons</span>
+                        <span class="difficulty">Beginner to Advanced</span>
+                    </div>
+                </div>
+                <div class="course-progress">
+                    <div class="progress-ring">
+                        <svg viewBox="0 0 36 36">
+                            <path class="progress-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+                            <path class="progress-fill" stroke-dasharray="0, 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+                        </svg>
+                        <span class="progress-text">0%</span>
+                    </div>
+                </div>
+            </div>
+            <div class="course-card" onclick="startSubject('science')">
+                <div class="course-icon">🔬</div>
+                <div class="course-info">
+                    <h3>Science</h3>
+                    <p>Physics, chemistry, biology, and earth science</p>
+                    <div class="course-meta">
+                        <span class="lessons-count">20 Lessons</span>
+                        <span class="difficulty">Beginner to Advanced</span>
+                    </div>
+                </div>
+                <div class="course-progress">
+                    <div class="progress-ring">
+                        <svg viewBox="0 0 36 36">
+                            <path class="progress-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+                            <path class="progress-fill" stroke-dasharray="0, 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+                        </svg>
+                        <span class="progress-text">0%</span>
+                    </div>
+                </div>
+            </div>
+            <div class="course-card" onclick="startSubject('english')">
+                <div class="course-icon">📖</div>
+                <div class="course-info">
+                    <h3>English</h3>
+                    <p>Grammar, vocabulary, reading, and writing</p>
+                    <div class="course-meta">
+                        <span class="lessons-count">22 Lessons</span>
+                        <span class="difficulty">Beginner to Advanced</span>
+                    </div>
+                </div>
+                <div class="course-progress">
+                    <div class="progress-ring">
+                        <svg viewBox="0 0 36 36">
+                            <path class="progress-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+                            <path class="progress-fill" stroke-dasharray="0, 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+                        </svg>
+                        <span class="progress-text">0%</span>
+                    </div>
+                </div>
+            </div>
+            <div class="course-card" onclick="startSubject('social')">
+                <div class="course-icon">🌍</div>
+                <div class="course-info">
+                    <h3>Social Studies</h3>
+                    <p>History, geography, civics, and culture</p>
+                    <div class="course-meta">
+                        <span class="lessons-count">18 Lessons</span>
+                        <span class="difficulty">Beginner to Advanced</span>
+                    </div>
+                </div>
+                <div class="course-progress">
+                    <div class="progress-ring">
+                        <svg viewBox="0 0 36 36">
+                            <path class="progress-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+                            <path class="progress-fill" stroke-dasharray="0, 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+                        </svg>
+                        <span class="progress-text">0%</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Lesson Page -->
+    <div id="lesson-page" class="page">
+        <div class="lesson-header">
+            <button class="btn-back" onclick="showPage('courses')">← Back</button>
+            <div class="lesson-title-bar">
+                <h2 id="lesson-title">Lesson Title</h2>
+                <div class="lesson-progress-bar">
+                    <div class="lesson-progress-fill" id="lesson-progress-fill"></div>
+                </div>
+            </div>
+        </div>
+        <div class="lesson-container">
+            <div class="lesson-content" id="lesson-content">
+                <!-- Dynamic content goes here -->
+            </div>
+            <div class="lesson-sidebar">
+                <div class="sidebar-card">
+                    <h4>Your Progress</h4>
+                    <div class="progress-stats">
+                        <div class="stat-item">
+                            <span class="stat-value" id="current-question">1</span>
+                            <span class="stat-label">of</span>
+                            <span class="stat-value" id="total-questions">10</span>
+                        </div>
+                    </div>
+                    <div class="score-display">
+                        <span>Score: </span>
+                        <span id="current-score">0</span>
+                    </div>
+                </div>
+                <div class="sidebar-card">
+                    <h4>Lesson Topics</h4>
+                    <ul class="topic-progress-list" id="topic-progress-list">
+                        <!-- Dynamic topics -->
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Progress Page -->
+    <div id="progress-page" class="page">
+        <div class="page-header">
+            <h1>My Progress</h1>
+            <p>Track your learning journey</p>
+        </div>
+        <div class="progress-container">
+            <div class="progress-overview">
+                <div class="progress-stat-card">
+                    <div class="stat-icon">📚</div>
+                    <div class="stat-info">
+                        <span class="stat-value" id="total-lessons-completed">0</span>
+                        <span class="stat-label">Lessons Completed</span>
+                    </div>
+                </div>
+                <div class="progress-stat-card">
+                    <div class="stat-icon">🎯</div>
+                    <div class="stat-info">
+                        <span class="stat-value" id="total-score">0%</span>
+                        <span class="stat-label">Average Score</span>
+                    </div>
+                </div>
+                <div class="progress-stat-card">
+                    <div class="stat-icon">🔥</div>
+                    <div class="stat-info">
+                        <span class="stat-value" id="streak-count">0</span>
+                        <span class="stat-label">Day Streak</span>
+                    </div>
+                </div>
+                <div class="progress-stat-card">
+                    <div class="stat-icon">⭐</div>
+                    <div class="stat-info">
+                        <span class="stat-value" id="total-points">0</span>
+                        <span class="stat-label">Total Points</span>
+                    </div>
+                </div>
+            </div>
+            <div class="subject-progress-grid">
+                <div class="subject-progress-card">
+                    <div class="subject-header">
+                        <span class="subject-icon">📐</span>
+                        <h3>Mathematics</h3>
+                    </div>
+                    <div class="progress-bar-container">
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="math-progress" style="width: 0%"></div>
+                        </div>
+                        <span class="progress-percent" id="math-percent">0%</span>
+                    </div>
+                </div>
+                <div class="subject-progress-card">
+                    <div class="subject-header">
+                        <span class="subject-icon">🔬</span>
+                        <h3>Science</h3>
+                    </div>
+                    <div class="progress-bar-container">
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="science-progress" style="width: 0%"></div>
+                        </div>
+                        <span class="progress-percent" id="science-percent">0%</span>
+                    </div>
+                </div>
+                <div class="subject-progress-card">
+                    <div class="subject-header">
+                        <span class="subject-icon">📖</span>
+                        <h3>English</h3>
+                    </div>
+                    <div class="progress-bar-container">
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="english-progress" style="width: 0%"></div>
+                        </div>
+                        <span class="progress-percent" id="english-percent">0%</span>
+                    </div>
+                </div>
+                <div class="subject-progress-card">
+                    <div class="subject-header">
+                        <span class="subject-icon">🌍</span>
+                        <h3>Social Studies</h3>
+                    </div>
+                    <div class="progress-bar-container">
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="social-progress" style="width: 0%"></div>
+                        </div>
+                        <span class="progress-percent" id="social-percent">0%</span>
+                    </div>
+                </div>
+            </div>
+            <div class="recent-activity">
+                <h3>Recent Activity</h3>
+                <div class="activity-list" id="activity-list">
+                    <div class="activity-empty">No activity yet. Start learning!</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/app.js"></script>
+</body>
+</html>
