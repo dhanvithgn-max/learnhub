@@ -1,10 +1,16 @@
-const CACHE_NAME = 'learnhub-v1';
+const CACHE_NAME = 'learnhub-v8';
 const urlsToCache = [
-    '/',
-    '/index.html',
-    '/css/style.css',
-    '/js/app.js',
-    '/manifest.json'
+    './',
+    './index.html',
+    './install.html',
+    './css/style.css',
+    './js/topics-1.js',
+    './js/topics-2.js',
+    './js/topics-3.js',
+    './js/app.js',
+    './manifest.json',
+    './icons/icon-192x192.png',
+    './icons/icon-512x512.png'
 ];
 
 // Install event
@@ -13,7 +19,6 @@ self.addEventListener('install', event => {
         caches.open(CACHE_NAME)
             .then(cache => cache.addAll(urlsToCache))
     );
-    self.skipWaiting();
 });
 
 // Activate event
@@ -32,10 +37,17 @@ self.addEventListener('activate', event => {
     self.clients.claim();
 });
 
+// Allow the page to activate a waiting worker immediately
+self.addEventListener('message', event => {
+    if (event.data && event.data.type === 'SKIP_WAITING') {
+        self.skipWaiting();
+    }
+});
+
 // Fetch event - Network first, fallback to cache
 self.addEventListener('fetch', event => {
     event.respondWith(
-        fetch(event.request)
+        fetch(event.request, { cache: 'no-cache' })
             .then(response => {
                 // Clone the response
                 const responseClone = response.clone();
@@ -46,7 +58,7 @@ self.addEventListener('fetch', event => {
                 return response;
             })
             .catch(() => {
-                caches.match(event.request);
+                return caches.match(event.request);
             })
     );
 });

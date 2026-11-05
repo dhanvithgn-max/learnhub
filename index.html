@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <meta name="theme-color" content="#FF6B35">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -15,6 +15,17 @@
     <link rel="stylesheet" href="css/style.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script>
+        try {
+            const savedSettings = JSON.parse(localStorage.getItem('settings')) || {};
+            const savedTheme = savedSettings.theme || 'auto';
+            const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            if (savedTheme === 'dark' || (savedTheme === 'auto' && prefersDark)) {
+                document.documentElement.classList.add('dark');
+                document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0F172A');
+            }
+        } catch (e) {}
+    </script>
 </head>
 <body>
     <!-- Navigation -->
@@ -34,6 +45,12 @@
                 <span class="user-name" id="user-name" style="display:none;" onclick="showProfile()"></span>
                 <button class="btn-signin" id="btn-signin" onclick="showSignInModal()">Sign In</button>
                 <button class="btn-getstarted" id="btn-signup" onclick="showSignUpModal()">Sign Up</button>
+                <button class="btn-icon" onclick="showPage('settings')" title="Settings" aria-label="Settings">
+                    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <circle cx="12" cy="12" r="3"></circle>
+                        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                    </svg>
+                </button>
             </div>
         </div>
     </nav>
@@ -148,7 +165,7 @@
                     </p>
                     <div class="hero-buttons">
                         <button class="btn-primary" onclick="state.grade ? showPage('courses') : showGradeModal()">Start Learning</button>
-                        <button class="btn-secondary" onclick="window.location.href='install.html'">📱 Install App</button>
+                        <button class="btn-secondary" id="install-app-btn" onclick="window.location.href='install.html'">📱 Install App</button>
                     </div>
                     <div class="hero-stats">
                         <div class="stat">
@@ -418,7 +435,7 @@
                     <h3>Mathematics</h3>
                     <p>Numbers, operations, geometry, and more</p>
                     <div class="course-meta">
-                        <span class="lessons-count">24 Lessons</span>
+                        <span class="lessons-count" id="math-lessons-count">9 Lessons</span>
                         <span class="difficulty">Beginner to Advanced</span>
                     </div>
                 </div>
@@ -438,7 +455,7 @@
                     <h3>Science</h3>
                     <p>Physics, chemistry, biology, and earth science</p>
                     <div class="course-meta">
-                        <span class="lessons-count">20 Lessons</span>
+                        <span class="lessons-count" id="science-lessons-count">8 Lessons</span>
                         <span class="difficulty">Beginner to Advanced</span>
                     </div>
                 </div>
@@ -458,7 +475,7 @@
                     <h3>English</h3>
                     <p>Grammar, vocabulary, reading, and writing</p>
                     <div class="course-meta">
-                        <span class="lessons-count">22 Lessons</span>
+                        <span class="lessons-count" id="english-lessons-count">8 Lessons</span>
                         <span class="difficulty">Beginner to Advanced</span>
                     </div>
                 </div>
@@ -478,7 +495,7 @@
                     <h3>Social Studies</h3>
                     <p>History, geography, civics, and culture</p>
                     <div class="course-meta">
-                        <span class="lessons-count">18 Lessons</span>
+                        <span class="lessons-count" id="social-lessons-count">7 Lessons</span>
                         <span class="difficulty">Beginner to Advanced</span>
                     </div>
                 </div>
@@ -631,6 +648,212 @@
         </div>
     </div>
 
+    <!-- Settings Page -->
+    <div id="settings-page" class="page">
+        <div class="page-header">
+            <h1>Settings</h1>
+            <p>Manage your account and learning preferences</p>
+        </div>
+        <div class="settings-container">
+            <div class="settings-card settings-profile-card">
+                <div class="settings-avatar" id="settings-avatar">G</div>
+                <div class="settings-profile-info">
+                    <h3 id="settings-name">Guest</h3>
+                    <p id="settings-email">Not signed in</p>
+                </div>
+                <button class="btn-secondary settings-auth-btn" id="settings-auth-btn" onclick="showSignInModal()">Sign In</button>
+            </div>
+
+            <div class="settings-card">
+                <h3 class="settings-card-title">Appearance</h3>
+                <div class="setting-row">
+                    <div class="setting-info">
+                        <span class="setting-icon">🌙</span>
+                        <div>
+                            <div class="setting-label">Theme</div>
+                            <div class="setting-desc">Choose light, dark, or match your system</div>
+                        </div>
+                    </div>
+                    <div class="theme-options">
+                        <button class="theme-btn" data-theme="light" onclick="setTheme('light')">Light</button>
+                        <button class="theme-btn" data-theme="dark" onclick="setTheme('dark')">Dark</button>
+                        <button class="theme-btn" data-theme="auto" onclick="setTheme('auto')">Auto</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="settings-card">
+                <h3 class="settings-card-title">Learning</h3>
+                <div class="setting-row">
+                    <div class="setting-info">
+                        <span class="setting-icon">🎓</span>
+                        <div>
+                            <div class="setting-label">Your Class</div>
+                            <div class="setting-desc">Lessons are customized for this class</div>
+                        </div>
+                    </div>
+                    <button class="setting-value-btn" onclick="showGradeModal()">Class <span id="settings-grade">—</span></button>
+                </div>
+                <div class="setting-row">
+                    <div class="setting-info">
+                        <span class="setting-icon">🔊</span>
+                        <div>
+                            <div class="setting-label">Sound Effects</div>
+                            <div class="setting-desc">Play a sound after each answer</div>
+                        </div>
+                    </div>
+                    <label class="toggle">
+                        <input type="checkbox" id="setting-sound" onchange="toggleSetting('sound', this.checked)">
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+                <div class="setting-row">
+                    <div class="setting-info">
+                        <span class="setting-icon">📳</span>
+                        <div>
+                            <div class="setting-label">Haptic Feedback</div>
+                            <div class="setting-desc">Vibrate on supported devices</div>
+                        </div>
+                    </div>
+                    <label class="toggle">
+                        <input type="checkbox" id="setting-haptics" onchange="toggleSetting('haptics', this.checked)">
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+            </div>
+
+            <div class="settings-card">
+                <h3 class="settings-card-title">Data & Privacy</h3>
+                <div class="setting-row">
+                    <div class="setting-info">
+                        <span class="setting-icon">🔄</span>
+                        <div>
+                            <div class="setting-label">Reset Progress</div>
+                            <div class="setting-desc">Clear lessons, points, and streaks</div>
+                        </div>
+                    </div>
+                    <button class="setting-value-btn danger" onclick="resetProgress()">Reset</button>
+                </div>
+                <div class="setting-row">
+                    <div class="setting-info">
+                        <span class="setting-icon">🗑️</span>
+                        <div>
+                            <div class="setting-label">Clear All Data</div>
+                            <div class="setting-desc">Delete your account and everything on this device</div>
+                        </div>
+                    </div>
+                    <button class="setting-value-btn danger" onclick="clearAllData()">Delete</button>
+                </div>
+            </div>
+
+            <div class="settings-card">
+                <h3 class="settings-card-title">About</h3>
+                <div class="setting-row">
+                    <div class="setting-info">
+                        <span class="setting-icon">◆</span>
+                        <div>
+                            <div class="setting-label">LearnHub</div>
+                            <div class="setting-desc">Learn by doing</div>
+                        </div>
+                    </div>
+                    <span class="setting-value" id="app-version">v1.3.3</span>
+                </div>
+                <div class="setting-row">
+                    <div class="setting-info">
+                        <span class="setting-icon">⬇️</span>
+                        <div>
+                            <div class="setting-label">Check for Updates</div>
+                            <div class="setting-desc" id="update-status">Get the latest lessons and fixes</div>
+                        </div>
+                    </div>
+                    <button class="setting-value-btn" id="update-check-btn" onclick="checkForAppUpdate()">Check</button>
+                </div>
+                <div class="setting-row">
+                    <div class="setting-info">
+                        <span class="setting-icon">🔄</span>
+                        <div>
+                            <div class="setting-label">Update App</div>
+                            <div class="setting-desc">Force-download the newest version and restart</div>
+                        </div>
+                    </div>
+                    <button class="setting-value-btn" id="update-app-btn" onclick="updateApp()">Update</button>
+                </div>
+                <div class="setting-row" id="install-app-row">
+                    <div class="setting-info">
+                        <span class="setting-icon">📱</span>
+                        <div>
+                            <div class="setting-label">Install App</div>
+                            <div class="setting-desc">Add LearnHub to your home screen</div>
+                        </div>
+                    </div>
+                    <button class="setting-value-btn" onclick="window.location.href='install.html'">Install</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mobile bottom navigation -->
+    <nav class="mobile-nav" aria-label="Mobile navigation">
+        <button type="button" class="mobile-nav-item active" data-page="home" onclick="showPage('home')" aria-current="page">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M3 10.5 12 3l9 7.5"></path>
+                <path d="M5 9.5V21h14V9.5"></path>
+            </svg>
+            <span>Home</span>
+        </button>
+        <button type="button" class="mobile-nav-item" data-page="courses" onclick="showPage('courses')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect x="4" y="3" width="16" height="18" rx="2"></rect>
+                <path d="M8 7h8M8 11h8M8 15h5"></path>
+            </svg>
+            <span>Courses</span>
+        </button>
+        <button type="button" class="mobile-nav-item" data-page="progress" onclick="showPage('progress')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M4 20V10M10 20V4M16 20v-7M22 20H2"></path>
+            </svg>
+            <span>Progress</span>
+        </button>
+        <button type="button" class="mobile-nav-item" data-page="settings" onclick="showPage('settings')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M4 6h16M4 12h16M4 18h16"></path>
+                <circle cx="9" cy="6" r="2"></circle>
+                <circle cx="15" cy="12" r="2"></circle>
+                <circle cx="8" cy="18" r="2"></circle>
+            </svg>
+            <span>Settings</span>
+        </button>
+    </nav>
+
+    <!-- AI Tutor -->
+    <button class="tutor-fab" id="tutor-fab" onclick="toggleTutor()" aria-label="Ask the AI tutor">
+        <span class="tutor-fab-spark">✦</span>
+        <span class="tutor-fab-text">Ask Kai</span>
+    </button>
+
+    <div class="tutor-panel" id="tutor-panel" aria-hidden="true" role="dialog" aria-label="AI tutor">
+        <div class="tutor-header">
+            <div class="tutor-brand">
+                <div class="tutor-avatar">K</div>
+                <div>
+                    <div class="tutor-name">Kai</div>
+                    <div class="tutor-status"><span class="tutor-dot"></span>AI Tutor &middot; online</div>
+                </div>
+            </div>
+            <button class="tutor-close" onclick="toggleTutor()" aria-label="Close tutor">&times;</button>
+        </div>
+        <div class="tutor-context" id="tutor-context">Ask me anything about your lessons</div>
+        <div class="tutor-messages" id="tutor-messages"></div>
+        <div class="tutor-chips" id="tutor-chips"></div>
+        <form class="tutor-input-row" onsubmit="sendTutorMessage(event)">
+            <input type="text" id="tutor-input" placeholder="Ask a question..." autocomplete="off">
+            <button type="submit" class="tutor-send" aria-label="Send">↑</button>
+        </form>
+    </div>
+
+    <script src="js/topics-1.js"></script>
+    <script src="js/topics-2.js"></script>
+    <script src="js/topics-3.js"></script>
     <script src="js/app.js"></script>
 </body>
 </html>

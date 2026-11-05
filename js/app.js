@@ -1,3 +1,21 @@
+// Default progress for a fresh account
+function defaultProgress() {
+    return {
+        math: { completed: 0, total: 9, score: 0 },
+        science: { completed: 0, total: 8, score: 0 },
+        english: { completed: 0, total: 8, score: 0 },
+        social: { completed: 0, total: 7, score: 0 }
+    };
+}
+
+// Default user preferences
+function defaultSettings() {
+    return { sound: true, haptics: true, theme: 'auto' };
+}
+
+// Bump this when shipping a new version
+const APP_VERSION = '1.3.3';
+
 // App State
 let state = {
     currentPage: 'home',
@@ -7,17 +25,14 @@ let state = {
     score: 0,
     grade: parseInt(localStorage.getItem('grade')) || null,
     user: JSON.parse(localStorage.getItem('user')) || null,
-    progress: JSON.parse(localStorage.getItem('progress')) || {
-        math: { completed: 0, total: 24, score: 0 },
-        science: { completed: 0, total: 20, score: 0 },
-        english: { completed: 0, total: 22, score: 0 },
-        social: { completed: 0, total: 18, score: 0 }
-    },
+    progress: JSON.parse(localStorage.getItem('progress')) || defaultProgress(),
     activity: JSON.parse(localStorage.getItem('activity')) || [],
     streak: parseInt(localStorage.getItem('streak')) || 0,
     points: parseInt(localStorage.getItem('points')) || 0,
     lastVisit: localStorage.getItem('lastVisit'),
     completedLessons: JSON.parse(localStorage.getItem('completedLessons')) || {},
+    settings: Object.assign(defaultSettings(), JSON.parse(localStorage.getItem('settings')) || {}),
+    lastAnswerCorrect: null,
     currentShuffledQuestions: null
 };
 
@@ -73,6 +88,7 @@ function handleSignUp(e) {
     localStorage.setItem('user', JSON.stringify(user));
     
     updateUserUI();
+    if (state.currentPage === 'settings') updateSettingsPage();
     closeSignUpModal();
     showGradeModal();
     alert('Account created successfully! Welcome to LearnHub!');
@@ -93,6 +109,7 @@ function handleSignIn(e) {
         state.user = user;
         localStorage.setItem('user', JSON.stringify(user));
         updateUserUI();
+        if (state.currentPage === 'settings') updateSettingsPage();
         closeSignInModal();
         alert('Welcome back, ' + user.name + '!');
     } else {
@@ -105,6 +122,7 @@ function handleSignOut() {
     localStorage.removeItem('user');
     updateUserUI();
     closeProfileModal();
+    if (state.currentPage === 'settings') updateSettingsPage();
 }
 
 function updateUserUI() {
@@ -139,6 +157,583 @@ function closeProfileModal() {
     document.getElementById('profile-modal').style.display = 'none';
 }
 
+// Install app
+function isAppInstalled() {
+    return window.matchMedia('(display-mode: standalone)').matches ||
+        window.navigator.standalone === true ||
+        localStorage.getItem('appInstalled') === '1';
+}
+
+function updateInstallUI() {
+    if (!isAppInstalled()) return;
+
+    const heroBtn = document.getElementById('install-app-btn');
+    const settingsRow = document.getElementById('install-app-row');
+    if (heroBtn) heroBtn.style.display = 'none';
+    if (settingsRow) settingsRow.style.display = 'none';
+}
+
+// App updates
+let appUpdateRegistration = null;
+let pendingWorker = null;
+let refreshingForUpdate = false;
+
+function setUpdateStatus(message) {
+    const status = document.getElementById('update-status');
+    if (status) status.textContent = message;
+}
+
+function watchUpdateWorker(worker) {
+    if (!worker) return;
+
+    const checkInstalled = () => {
+        if (worker.state === 'installed' && navigator.serviceWorker.controller) {
+            pendingWorker = worker;
+            setUpdateStatus('Update available — refresh to apply');
+            showUpdateToast();
+        }
+    };
+
+    worker.addEventListener('statechange', checkInstalled);
+    checkInstalled();
+}
+
+function setupAppUpdates(registration) {
+    appUpdateRegistration = registration;
+
+    registration.addEventListener('updatefound', () => {
+        watchUpdateWorker(registration.installing);
+    });
+    watchUpdateWorker(registration.installing);
+
+    // A worker may already be waiting from a previous visit
+    if (registration.waiting && navigator.serviceWorker.controller) {
+        pendingWorker = registration.waiting;
+        setUpdateStatus('Update available — refresh to apply');
+        showUpdateToast();
+    }
+
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (refreshingForUpdate) return;
+        refreshingForUpdate = true;
+        window.location.reload();
+    });
+
+    // Check periodically and whenever the app regains focus
+    setInterval(() => registration.update().catch(() => {}), 30 * 60 * 1000);
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') {
+            registration.update().catch(() => {});
+        }
+    });
+}
+
+function showUpdateToast() {
+    let toast = document.getElementById('update-toast');
+
+    if (!toast) {
+        toast = document.createElement('div');
+        toast.id = 'update-toast';
+        toast.className = 'update-toast';
+        toast.innerHTML = `
+            <div class="update-toast-text">
+                <strong>New version available</strong>
+                <span>Refresh to get the latest lessons and fixes.</span>
+            </div>
+            <button type="button" onclick="applyAppUpdate()">Update</button>
+            <button type="button" class="update-toast-close" onclick="hideUpdateToast()" aria-label="Dismiss">&times;</button>
+        `;
+        document.body.appendChild(toast);
+    }
+
+    requestAnimationFrame(() => toast.classList.add('show'));
+}
+
+function hideUpdateToast() {
+    const toast = document.getElementById('update-toast');
+    if (toast) toast.classList.remove('show');
+}
+
+function applyAppUpdate() {
+    if (pendingWorker) {
+        pendingWorker.postMessage({ type: 'SKIP_WAITING' });
+        setTimeout(() => {
+            if (!refreshingForUpdate) {
+                refreshingForUpdate = true;
+                window.location.reload();
+            }
+        }, 1500);
+    } else {
+        window.location.reload();
+    }
+}
+
+async function clearAppCachesAndWorkers() {
+    if ('caches' in window) {
+        const cacheNames = await caches.keys();
+        await Promise.all(cacheNames.map(name => caches.delete(name)));
+    }
+
+    if ('serviceWorker' in navigator) {
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        await Promise.all(registrations.map(registration => registration.unregister()));
+    }
+}
+
+async function updateApp() {
+    const button = document.getElementById('update-app-btn');
+
+    if (!navigator.onLine) {
+        setUpdateStatus('You are offline — connect to the internet to update');
+        return;
+    }
+
+    if (button) {
+        button.disabled = true;
+        button.textContent = 'Updating...';
+    }
+    setUpdateStatus('Preparing the latest version...');
+
+    try {
+        if (appUpdateRegistration) {
+            await appUpdateRegistration.update();
+            const waiting = appUpdateRegistration.waiting || pendingWorker;
+            if (waiting) {
+                pendingWorker = waiting;
+                setUpdateStatus('Applying update...');
+                applyAppUpdate();
+                return;
+            }
+        }
+
+        await clearAppCachesAndWorkers();
+
+        setUpdateStatus('Refreshing...');
+        setTimeout(() => window.location.reload(), 400);
+    } catch (error) {
+        if (button) {
+            button.disabled = false;
+            button.textContent = 'Update';
+        }
+        setUpdateStatus('Could not update. Check your connection.');
+    }
+}
+
+async function checkForAppUpdate() {
+    const button = document.getElementById('update-check-btn');
+
+    if (!appUpdateRegistration) {
+        setUpdateStatus('Updates require the app to be served over http(s)');
+        return;
+    }
+
+    if (pendingWorker) {
+        setUpdateStatus('Update available — refresh to apply');
+        showUpdateToast();
+        return;
+    }
+
+    if (button) {
+        button.disabled = true;
+        button.textContent = 'Checking...';
+    }
+    setUpdateStatus('Checking for updates...');
+
+    try {
+        await appUpdateRegistration.update();
+        setTimeout(() => {
+            if (button) {
+                button.disabled = false;
+                button.textContent = 'Check';
+            }
+            if (!pendingWorker) setUpdateStatus('You are up to date');
+        }, 1200);
+    } catch (error) {
+        if (button) {
+            button.disabled = false;
+            button.textContent = 'Check';
+        }
+        setUpdateStatus('Could not check for updates');
+    }
+}
+
+// Settings
+function saveSettings() {
+    localStorage.setItem('settings', JSON.stringify(state.settings));
+}
+
+function toggleSetting(key, value) {
+    state.settings[key] = value;
+    saveSettings();
+}
+
+function getEffectiveTheme() {
+    const theme = state.settings.theme || 'auto';
+    if (theme === 'auto') {
+        return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    }
+    return theme;
+}
+
+function applyTheme() {
+    const isDark = getEffectiveTheme() === 'dark';
+    document.documentElement.classList.toggle('dark', isDark);
+
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute('content', isDark ? '#0F172A' : '#FF6B35');
+
+    document.querySelectorAll('.theme-btn').forEach(button => {
+        button.classList.toggle('active', button.dataset.theme === (state.settings.theme || 'auto'));
+    });
+}
+
+function setTheme(theme) {
+    state.settings.theme = theme;
+    saveSettings();
+    applyTheme();
+}
+
+function updateSettingsPage() {
+    const name = state.user ? state.user.name : 'Guest';
+    const email = state.user ? state.user.email : 'Not signed in';
+
+    document.getElementById('settings-name').textContent = name;
+    document.getElementById('settings-email').textContent = email;
+    document.getElementById('settings-avatar').textContent = name.charAt(0).toUpperCase();
+
+    const authBtn = document.getElementById('settings-auth-btn');
+    if (state.user) {
+        authBtn.textContent = 'Sign Out';
+        authBtn.onclick = handleSignOut;
+    } else {
+        authBtn.textContent = 'Sign In';
+        authBtn.onclick = showSignInModal;
+    }
+
+    document.getElementById('settings-grade').textContent = state.grade || '—';
+    document.getElementById('setting-sound').checked = state.settings.sound;
+    document.getElementById('setting-haptics').checked = state.settings.haptics;
+
+    const versionEl = document.getElementById('app-version');
+    if (versionEl) versionEl.textContent = 'v' + APP_VERSION;
+
+    applyTheme();
+}
+
+// Sound + haptic feedback
+let audioContext = null;
+
+function playFeedback(correct) {
+    if (state.settings.haptics && navigator.vibrate) {
+        navigator.vibrate(correct ? 30 : [40, 40, 40]);
+    }
+
+    if (!state.settings.sound) return;
+
+    try {
+        audioContext = audioContext || new (window.AudioContext || window.webkitAudioContext)();
+        if (audioContext.state === 'suspended') audioContext.resume();
+
+        const now = audioContext.currentTime;
+        const oscillator = audioContext.createOscillator();
+        const gain = audioContext.createGain();
+
+        oscillator.connect(gain);
+        gain.connect(audioContext.destination);
+        oscillator.type = 'sine';
+
+        if (correct) {
+            oscillator.frequency.setValueAtTime(523.25, now);
+            oscillator.frequency.setValueAtTime(783.99, now + 0.1);
+        } else {
+            oscillator.frequency.setValueAtTime(220, now);
+            oscillator.frequency.setValueAtTime(174.61, now + 0.12);
+        }
+
+        gain.gain.setValueAtTime(0.0001, now);
+        gain.gain.exponentialRampToValueAtTime(0.2, now + 0.01);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.3);
+
+        oscillator.start(now);
+        oscillator.stop(now + 0.3);
+    } catch (e) {
+        // Audio not available; ignore.
+    }
+}
+
+// Reset learning progress but keep the account
+function resetProgress() {
+    if (!confirm('Reset all your progress, points, and streaks? This cannot be undone.')) return;
+
+    ['progress', 'activity', 'points', 'streak', 'completedLessons', 'lastVisit'].forEach(key => {
+        localStorage.removeItem(key);
+    });
+
+    state.progress = defaultProgress();
+    state.activity = [];
+    state.points = 0;
+    state.streak = 0;
+    state.completedLessons = {};
+    state.lastVisit = null;
+
+    syncProgressTotals();
+    updateProgressPage();
+    updateSettingsPage();
+    alert('Your progress has been reset.');
+}
+
+// Delete the account and all LearnHub data on this device
+function clearAllData() {
+    if (!confirm('Delete your account and all LearnHub data on this device? This cannot be undone.')) return;
+
+    ['users', 'user', 'grade', 'progress', 'activity', 'points', 'streak',
+     'completedLessons', 'lastVisit', 'settings'].forEach(key => {
+        localStorage.removeItem(key);
+    });
+
+    location.reload();
+}
+
+// AI Tutor (Kai)
+const tutorSubjectNames = { math: 'Math', science: 'Science', english: 'English', social: 'Social Studies' };
+const tutorStopWords = new Set(['what', 'which', 'with', 'that', 'this', 'from', 'have', 'does', 'your', 'about', 'tell', 'help', 'explain', 'please', 'give', 'hint', 'question', 'answer', 'wrong', 'there', 'their', 'they', 'them', 'into', 'when', 'where', 'will', 'would', 'could', 'should', 'know', 'want', 'need']);
+let tutorInitialized = false;
+
+function toggleTutor(forceOpen) {
+    const panel = document.getElementById('tutor-panel');
+    const fab = document.getElementById('tutor-fab');
+    const open = typeof forceOpen === 'boolean' ? forceOpen : !panel.classList.contains('open');
+
+    panel.classList.toggle('open', open);
+    panel.setAttribute('aria-hidden', String(!open));
+    fab.classList.toggle('hidden', open);
+
+    if (open) {
+        if (!tutorInitialized) initTutor();
+        updateTutorContext();
+        setTimeout(() => document.getElementById('tutor-input').focus(), 250);
+    }
+}
+
+function initTutor() {
+    tutorInitialized = true;
+    addTutorMessage('tutor', "Hi! I'm Kai, your LearnHub tutor. I can see the lesson you're working on, so ask me for a hint, an explanation, or why an answer doesn't fit.");
+    renderTutorChips();
+}
+
+function getTutorContext() {
+    if (state.currentPage !== 'lesson' || !state.currentSubject) return null;
+
+    const lessons = getLessons()[state.currentSubject];
+    if (!lessons || !lessons[state.currentLesson]) return null;
+
+    const lesson = lessons[state.currentLesson];
+    const questions = state.currentShuffledQuestions || lesson.questions;
+    const question = questions[state.currentQuestionIndex];
+    if (!question) return null;
+
+    return { subject: state.currentSubject, lesson, question };
+}
+
+function updateTutorContext() {
+    const contextBar = document.getElementById('tutor-context');
+    const chips = document.getElementById('tutor-chips');
+    if (!contextBar || !chips) return;
+
+    const ctx = getTutorContext();
+    if (ctx) {
+        contextBar.textContent = `Helping with: ${ctx.lesson.title} · Q${state.currentQuestionIndex + 1}`;
+        contextBar.classList.add('active');
+    } else {
+        contextBar.textContent = state.grade ? `Class ${state.grade} · Ask about any subject` : 'Ask me anything about your lessons';
+        contextBar.classList.remove('active');
+    }
+
+    renderTutorChips();
+}
+
+function renderTutorChips() {
+    const chipContainer = document.getElementById('tutor-chips');
+    if (!chipContainer) return;
+
+    const ctx = getTutorContext();
+    const chips = ctx
+        ? [['💡 Hint', 'hint'], ['📖 Explain', 'explain'], ['❌ Why wrong?', 'wrong']]
+        : [['What can you do?', 'help'], ['Suggest a topic', 'topic'], ['How do points work?', 'points']];
+
+    chipContainer.innerHTML = chips.map(([label, intent]) =>
+        `<button type="button" onclick="askTutorChip('${intent}')">${label}</button>`
+    ).join('');
+}
+
+function askTutorChip(intent) {
+    const labels = {
+        hint: 'Give me a hint',
+        explain: 'Explain this to me',
+        wrong: 'Why was I wrong?',
+        help: 'What can you do?',
+        topic: 'Suggest a topic',
+        points: 'How do points work?'
+    };
+
+    addTutorMessage('user', labels[intent] || 'Help');
+    respondToTutor(intent);
+}
+
+function sendTutorMessage(event) {
+    event.preventDefault();
+    const input = document.getElementById('tutor-input');
+    const text = input.value.trim();
+    if (!text) return;
+
+    input.value = '';
+    addTutorMessage('user', text);
+    respondToTutor(text);
+}
+
+function addTutorMessage(role, text) {
+    const messages = document.getElementById('tutor-messages');
+    if (!messages) return;
+
+    const row = document.createElement('div');
+    row.className = `tutor-message ${role}`;
+
+    if (role === 'tutor') {
+        const avatar = document.createElement('div');
+        avatar.className = 'tutor-message-avatar';
+        avatar.textContent = 'K';
+        row.appendChild(avatar);
+    }
+
+    const bubble = document.createElement('div');
+    bubble.className = 'tutor-bubble';
+    bubble.textContent = text;
+    row.appendChild(bubble);
+
+    messages.appendChild(row);
+    messages.scrollTop = messages.scrollHeight;
+}
+
+function showTutorTyping() {
+    const messages = document.getElementById('tutor-messages');
+    if (!messages || document.getElementById('tutor-typing')) return;
+
+    const row = document.createElement('div');
+    row.className = 'tutor-message tutor';
+    row.id = 'tutor-typing';
+    row.innerHTML = '<div class="tutor-message-avatar">K</div><div class="tutor-bubble tutor-typing"><span></span><span></span><span></span></div>';
+    messages.appendChild(row);
+    messages.scrollTop = messages.scrollHeight;
+}
+
+function hideTutorTyping() {
+    const typing = document.getElementById('tutor-typing');
+    if (typing) typing.remove();
+}
+
+function respondToTutor(raw) {
+    showTutorTyping();
+    setTimeout(() => {
+        hideTutorTyping();
+        addTutorMessage('tutor', buildTutorReply(String(raw)));
+    }, 450 + Math.random() * 350);
+}
+
+function buildTutorReply(raw) {
+    const input = raw.toLowerCase().trim();
+    const ctx = getTutorContext();
+
+    if (/^(hi|hello|hey|namaste|good morning|good evening)\b/.test(input)) {
+        return ctx
+            ? `Hello! You're on "${ctx.lesson.title}". Want a hint or an explanation?`
+            : "Hello! I'm Kai. Ask me about any topic in Math, Science, English, or Social Studies.";
+    }
+
+    if (/(what can you do|how do you work|who are you|what do you do)/.test(input)) {
+        return "I'm your study buddy. I can give a hint without spoiling the answer, explain the idea behind a question, tell you why an option doesn't fit, and point you to the right lesson. I won't just hand over answers — working it out is what makes it stick.";
+    }
+
+    if (/(point|streak|xps?|reward)/.test(input)) {
+        return "You earn points equal to your score on each lesson, and your streak grows once per day when you practice. Check the My Progress page to see your totals.";
+    }
+
+    if (/(give me the answer|just tell me|what.?s the answer|solution)/.test(input)) {
+        if (ctx) return "I won't just give you the answer — but I'll get you there.\n\n" + tutorHint(ctx);
+        return "I won't just hand you an answer, but I'll help you reason it out. Tell me the topic or the question you're stuck on.";
+    }
+
+    if (/(hint|stuck|clue)/.test(input) && ctx) return tutorHint(ctx);
+    if (/(explain|understand|teach|concept)/.test(input) && ctx) return tutorExplain(ctx);
+    if (/(wrong|mistake|incorrect)/.test(input) && ctx) return tutorWhyWrong(ctx);
+
+    if (/(suggest|topic|what should i|recommend|practice)/.test(input)) return suggestTutorTopic();
+    if (ctx && input.length < 40) return tutorHint(ctx);
+
+    return searchTutorKnowledge(raw);
+}
+
+function tutorHint(ctx) {
+    const starters = {
+        math: "Let's work it step by step. Read the question, then do one operation at a time on paper.",
+        science: "Think about what you already know from this lesson. Which option fits that science idea?",
+        english: "Read the sentence carefully and test each option against the grammar or meaning rule.",
+        social: "Recall the key fact from this lesson. Which option matches it most closely?"
+    };
+
+    return `${starters[ctx.subject] || starters.math}\n\nQuestion: "${ctx.question.question}"\n\nEliminate one option you're sure is wrong, then tell me what you're left with.`;
+}
+
+function tutorExplain(ctx) {
+    return `Here's the key idea: ${ctx.question.explanation}\n\nHow does that connect to the question? Tell me which part still feels fuzzy.`;
+}
+
+function tutorWhyWrong(ctx) {
+    if (state.lastAnswerCorrect === true) {
+        return "You actually got that one right! If it felt like a guess, let's still check the reasoning so it sticks next time.";
+    }
+    if (state.lastAnswerCorrect === false) {
+        return "Mistakes are where the learning happens. " + ctx.question.explanation + "\n\nWhich step surprised you?";
+    }
+    return "You haven't answered this question yet. Pick an option first, then ask me why — I'll help you see what went wrong.";
+}
+
+function suggestTutorTopic() {
+    const data = getLessons();
+    const subjects = Object.keys(data);
+    const subject = subjects[Math.floor(Math.random() * subjects.length)];
+    const lessons = data[subject];
+    const lesson = lessons[Math.floor(Math.random() * lessons.length)];
+
+    return `Try "${lesson.title}" in ${tutorSubjectNames[subject]}. It's a good next step for Class ${state.grade || 4}.\n\nOpen Courses to start it, or ask me about the topic here.`;
+}
+
+function searchTutorKnowledge(raw) {
+    const data = getLessons();
+    const words = raw.toLowerCase().replace(/[^a-z0-9\s]/g, ' ').split(/\s+/)
+        .filter(word => word.length >= 4 && !tutorStopWords.has(word));
+    const matches = [];
+
+    if (words.length > 0) {
+        Object.keys(data).forEach(subject => {
+            data[subject].forEach(lesson => {
+                const text = (lesson.title + ' ' + lesson.questions.map(q => q.question + ' ' + q.explanation).join(' ')).toLowerCase();
+                let score = 0;
+                words.forEach(word => { if (text.includes(word)) score++; });
+                if (score > 0) matches.push({ subject, lesson, score });
+            });
+        });
+    }
+
+    matches.sort((a, b) => b.score - a.score);
+
+    if (matches.length > 0) {
+        const best = matches[0];
+        return `I found something close: "${best.lesson.title}" in ${tutorSubjectNames[best.subject]}.\n\n${best.lesson.questions[0].explanation}\n\nWant to practice it? Open Courses and pick ${tutorSubjectNames[best.subject]}.`;
+    }
+
+    return `I don't have that in my Class ${state.grade || 4} notes yet. I can help with Math, Science, English, and Social Studies. Try asking about a topic like "fractions", "gravity", "nouns", or "maps".`;
+}
+
 // Grade Selection Functions
 function showGradeModal() {
     document.getElementById('grade-modal').style.display = 'flex';
@@ -171,14 +766,17 @@ function selectGrade(grade) {
     
     // Load grade-specific content
     loadGradeContent(grade);
-    
+
+    // Keep the settings page in sync
+    if (state.currentPage === 'settings') updateSettingsPage();
+
     closeGradeModal();
 }
 
 function loadGradeContent(grade) {
-    // Load questions based on grade
-    // For now, we have 4th standard content
-    // We can add more grades later
+    syncProgressTotals();
+    updateCourseLessonCounts();
+    updateSubjectPreviews();
     console.log(`Loading content for Class ${grade}`);
 }
 
@@ -413,7 +1011,7 @@ const gradeLessons = {
             {
                 title: "Our Country India",
                 questions: [
-                    { type: "social", question: "What is the capital of India?", options: ["New Delhi", "Mumbai", "Kolkata", "Chennai"], correct: 0, explanation: "New Delhi is the capital city of India." },
+                    { type: "social", question: "Which city is the capital of India?", options: ["New Delhi", "Mumbai", "Kolkata", "Chennai"], correct: 0, explanation: "New Delhi is the capital city of India." },
                     { type: "social", question: "How many states does India have?", options: ["28", "25", "30", "32"], correct: 0, explanation: "India has 28 states and 8 union territories." },
                     { type: "social", question: "What is India's national animal?", options: ["Tiger", "Lion", "Elephant", "Peacock"], correct: 0, explanation: "The Royal Bengal Tiger is India's national animal." },
                     { type: "social", question: "When do we celebrate Independence Day?", options: ["August 15", "January 26", "October 2", "November 14"], correct: 0, explanation: "India celebrates Independence Day on August 15th." },
@@ -541,8 +1139,8 @@ const gradeLessons = {
             {
                 title: "Grammar Basics",
                 questions: [
-                    { type: "english", question: "Which is a noun?", options: ["Dog", "Run", "Happy", "Quickly"], correct: 0, explanation: "A noun is a person, place, thing, or idea. 'Dog' is a thing." },
-                    { type: "english", question: "Which word is a verb?", options: ["Jump", "Big", "Blue", "Fast"], correct: 0, explanation: "A verb is an action word. 'Jump' is an action." },
+                    { type: "english", question: "Which word names a person, place, or thing?", options: ["Dog", "Run", "Happy", "Quickly"], correct: 0, explanation: "A noun is a person, place, thing, or idea. 'Dog' is a thing." },
+                    { type: "english", question: "Identify the verb among these words.", options: ["Jump", "Big", "Blue", "Fast"], correct: 0, explanation: "A verb is an action word. 'Jump' is an action." },
                     { type: "english", question: "What type of word describes a noun?", options: ["Adjective", "Verb", "Noun", "Adverb"], correct: 0, explanation: "Adjectives describe nouns (e.g., 'big dog', 'happy child')." },
                     { type: "english", question: "Which is a proper noun?", options: ["Monday", "happy", "run", "big"], correct: 0, explanation: "Proper nouns name specific people, places, or things and are always capitalized." },
                     { type: "english", question: "Which sentence is correct?", options: ["She runs fast.", "She run fast.", "She running fast.", "She runned fast."], correct: 0, explanation: "With 'she' (third person singular), we add 's' to the verb: runs." }
@@ -561,7 +1159,7 @@ const gradeLessons = {
             {
                 title: "Vocabulary",
                 questions: [
-                    { type: "english", question: "What is the opposite of 'hot'?", options: ["Cold", "Warm", "Cool", "Mild"], correct: 0, explanation: "Hot and cold are opposites (antonyms)." },
+                    { type: "english", question: "Choose the antonym of hot.", options: ["Cold", "Warm", "Cool", "Mild"], correct: 0, explanation: "Hot and cold are opposites (antonyms)." },
                     { type: "english", question: "What does 'enormous' mean?", options: ["Very big", "Very small", "Very fast", "Very slow"], correct: 0, explanation: "Enormous means extremely large or big." },
                     { type: "english", question: "Which word means 'happy'?", options: ["Joyful", "Sad", "Angry", "Tired"], correct: 0, explanation: "Joyful means feeling or showing great happiness." },
                     { type: "english", question: "What is a synonym for 'big'?", options: ["Large", "Small", "Tiny", "Short"], correct: 0, explanation: "Synonyms are words with similar meanings. Big and large mean the same." },
@@ -584,7 +1182,7 @@ const gradeLessons = {
                     { type: "english", question: "Which punctuation ends a question?", options: ["?", ".", "!", ","], correct: 0, explanation: "A question mark (?) is used at the end of a question." },
                     { type: "english", question: "When do we use an exclamation mark?", options: ["Strong feelings or excitement", "End of sentence", "Lists", "Names"], correct: 0, explanation: "Exclamation marks show strong feelings like excitement, surprise, or anger." },
                     { type: "english", question: "What goes at the end of a statement?", options: ["Period (.)", "Question mark", "Exclamation mark", "Comma"], correct: 0, explanation: "A period (full stop) is used at the end of a statement." },
-                    { type: "english", question: "Which is correct?", options: ["Let's go!", "Lets go!", "Lets go.", "Let's go."], correct: 0, explanation: "'Let's' is a contraction of 'let us' and needs an apostrophe." },
+                    { type: "english", question: "Which sentence has correct punctuation?", options: ["Let's go!", "Lets go!", "Lets go.", "Let's go."], correct: 0, explanation: "'Let's' is a contraction of 'let us' and needs an apostrophe." },
                     { type: "english", question: "Where does the apostrophe go in 'the dog's bone'?", options: ["After dog", "Before dog", "After the", "After bone"], correct: 0, explanation: "The apostrophe shows possession: the bone belonging to the dog." }
                 ]
             }
@@ -714,9 +1312,9 @@ const gradeLessons = {
                 title: "Indian Freedom Struggle",
                 questions: [
                     { type: "social", question: "Who gave the slogan 'Do or Die'?", options: ["Mahatma Gandhi", "Jawaharlal Nehru", "Subhas Chandra Bose", "Bhagat Singh"], correct: 0, explanation: "Mahatma Gandhi gave the 'Do or Die' slogan during the Quit India Movement." },
-                    { type: "social", question: "What was the Quit India Movement?", options: ["Demand to end British rule", "A festival", "A war", "An education reform"], correct: 0, explanation: "The Quit India Movement (1942) demanded an immediate end to British rule in India." },
+                    { type: "social", question: "Which movement demanded that the British leave India?", options: ["Demand to end British rule", "A festival", "A war", "An education reform"], correct: 0, explanation: "The Quit India Movement (1942) demanded an immediate end to British rule in India." },
                     { type: "social", question: "Who was the first Prime Minister of India?", options: ["Jawaharlal Nehru", "Mahatma Gandhi", "Sardar Patel", "Rajendra Prasad"], correct: 0, explanation: "Jawaharlal Nehru became the first Prime Minister of India in 1947." },
-                    { type: "social", question: "What was the Salt March?", options: ["Protesting salt tax by marching to sea", "A race", "A celebration", "A trade agreement"], correct: 0, explanation: "The Salt March (1930) was a protest against the British salt tax, led by Gandhi." },
+                    { type: "social", question: "Why did Gandhi march to Dandi?", options: ["Protesting salt tax by marching to sea", "A race", "A celebration", "A trade agreement"], correct: 0, explanation: "The Salt March (1930) was a protest against the British salt tax, led by Gandhi." },
                     { type: "social", question: "Who is known as the Iron Man of India?", options: ["Sardar Vallabhbhai Patel", "Mahatma Gandhi", "Jawaharlal Nehru", "Subhas Chandra Bose"], correct: 0, explanation: "Sardar Vallabhbhai Patel is called the Iron Man for uniting India's princely states." }
                 ]
             },
@@ -801,10 +1399,10 @@ const gradeLessons = {
             {
                 title: "Reading & Writing",
                 questions: [
-                    { type: "english", question: "What is a thesis statement?", options: ["Main argument of an essay", "Title of the essay", "Last sentence", "Supporting detail"], correct: 0, explanation: "A thesis statement presents the main argument or claim of an essay." },
+                    { type: "english", question: "What does a thesis statement do?", options: ["Main argument of an essay", "Title of the essay", "Last sentence", "Supporting detail"], correct: 0, explanation: "A thesis statement presents the main argument or claim of an essay." },
                     { type: "english", question: "What is figurative language?", options: ["Words with meanings beyond literal", "Technical words", "Simple words", "New words"], correct: 0, explanation: "Figurative language uses words in creative ways: metaphors, similes, etc." },
                     { type: "english", question: "What is a metaphor?", options: ["Comparison without 'like' or 'as'", "A question", "An exclamation", "A comparison with 'like'"], correct: 0, explanation: "A metaphor directly compares two things: 'Time is money.' (no 'like' or 'as')." },
-                    { type: "english", question: "What is a simile?", options: ["Comparison using 'like' or 'as'", "A rhyme", "A metaphor", "Alliteration"], correct: 0, explanation: "A simile compares using 'like' or 'as': 'Brave as a lion', 'Fast like a cheetah'." },
+                    { type: "english", question: "Which literary device compares two things using like or as?", options: ["Comparison using 'like' or 'as'", "A rhyme", "A metaphor", "Alliteration"], correct: 0, explanation: "A simile compares using 'like' or 'as': 'Brave as a lion', 'Fast like a cheetah'." },
                     { type: "english", question: "What is the purpose of a persuasive essay?", options: ["To convince the reader", "To inform", "To entertain", "To describe"], correct: 0, explanation: "A persuasive essay tries to convince the reader to agree with the writer's opinion." }
                 ]
             }
@@ -891,7 +1489,7 @@ const gradeLessons = {
             {
                 title: "Advanced Grammar",
                 questions: [
-                    { type: "english", question: "Which is a complex sentence?", options: ["When it rained, we stayed inside.", "I went home.", "She sings well.", "They play daily."], correct: 0, explanation: "A complex sentence has an independent clause and at least one dependent clause." },
+                    { type: "english", question: "Identify the complex sentence.", options: ["When it rained, we stayed inside.", "I went home.", "She sings well.", "They play daily."], correct: 0, explanation: "A complex sentence has an independent clause and at least one dependent clause." },
                     { type: "english", question: "Identify the gerund: 'Swimming is fun.'", options: ["Swimming", "Is", "Fun", "Swim"], correct: 0, explanation: "'Swimming' is a gerund - a verb form used as a noun." },
                     { type: "english", question: "What is an infinitive?", options: ["To + verb", "Verb + ing", "Verb + ed", "Verb + s"], correct: 0, explanation: "An infinitive is 'to' + base form of verb: to run, to eat, to study." },
                     { type: "english", question: "Which uses correct subject-verb agreement?", options: ["Everyone is welcome.", "Everyone are welcome.", "Everyone were welcome.", "Everyone am welcome."], correct: 0, explanation: "'Everyone' is singular, so it takes 'is'." },
@@ -905,7 +1503,7 @@ const gradeLessons = {
                     { type: "english", question: "What is rhyme scheme?", options: ["Pattern of rhyming words", "Number of lines", "Topic of poem", "Type of poem"], correct: 0, explanation: "Rhyme scheme is the pattern of rhymes at the end of each line (e.g., AABB, ABAB)." },
                     { type: "english", question: "What is an alliteration?", options: ["Repetition of initial consonant sounds", "Comparison using like", "Exaggeration", "Personification"], correct: 0, explanation: "Alliteration repeats beginning sounds: 'Peter Piper picked...'." },
                     { type: "english", question: "What is personification?", options: ["Giving human qualities to non-human things", "Using human characters", "A type of poem", "A metaphor"], correct: 0, explanation: "Personification gives human traits to non-human things: 'The wind whispered'." },
-                    { type: "english", question: "What is the climax of a story?", options: ["The turning point or highest tension", "The beginning", "The ending", "The title"], correct: 0, explanation: "The climax is the most exciting or intense part of the story." }
+                    { type: "english", question: "Which part of a story is the turning point?", options: ["The turning point or highest tension", "The beginning", "The ending", "The title"], correct: 0, explanation: "The climax is the most exciting or intense part of the story." }
                 ]
             }
         ],
@@ -923,11 +1521,11 @@ const gradeLessons = {
             {
                 title: "Indian Constitution",
                 questions: [
-                    { type: "social", question: "Who is called the Father of the Indian Constitution?", options: ["Dr. B.R. Ambedkar", "Mahatma Gandhi", "Jawaharlal Nehru", "Rajendra Prasad"], correct: 0, explanation: "Dr. B.R. Ambedkar is called the Father of the Indian Constitution." },
+                    { type: "social", question: "Who led the drafting of the Indian Constitution?", options: ["Dr. B.R. Ambedkar", "Mahatma Gandhi", "Jawaharlal Nehru", "Rajendra Prasad"], correct: 0, explanation: "Dr. B.R. Ambedkar is called the Father of the Indian Constitution." },
                     { type: "social", question: "When was the Indian Constitution adopted?", options: ["26 January 1950", "15 August 1947", "26 November 1949", "2 October 1950"], correct: 0, explanation: "The Indian Constitution came into effect on 26 January 1950 (Republic Day)." },
                     { type: "social", question: "How many fundamental rights are there?", options: ["6", "5", "7", "8"], correct: 0, explanation: "There are 6 fundamental rights in the Indian Constitution." },
                     { type: "social", question: "Which is a fundamental right?", options: ["Right to Equality", "Right to vote", "Right to pay taxes", "Right to study"], correct: 0, explanation: "Right to Equality is a fundamental right ensuring equal treatment before law." },
-                    { type: "social", question: "What is democracy?", options: ["Rule by people through elected representatives", "Rule by king", "Rule by military", "Rule by rich"], correct: 0, explanation: "Democracy means government by the people through their elected representatives." }
+                    { type: "social", question: "What is meant by democracy?", options: ["Rule by people through elected representatives", "Rule by king", "Rule by military", "Rule by rich"], correct: 0, explanation: "Democracy means government by the people through their elected representatives." }
                 ]
             }
         ]
@@ -1095,7 +1693,7 @@ const gradeLessons = {
                     { type: "english", question: "Which is a correct use of 'who'?", options: ["Who is coming?", "Whom is coming?", "Whose is coming?", "Who's book is this?"], correct: 0, explanation: "'Who' is used as subject: 'Who is coming?' (correct)." },
                     { type: "english", question: "What is a cleft sentence?", options: ["Sentence split for emphasis", "Two sentences joined", "A compound sentence", "A run-on sentence"], correct: 0, explanation: "A cleft sentence emphasizes part of the sentence: 'It was John who won.'" },
                     { type: "english", question: "What is voice change (active to passive)?", options: ["Object becomes subject", "Subject becomes object", "Verb changes tense", "No change needed"], correct: 0, explanation: "In passive voice, the object of active becomes the subject." },
-                    { type: "english", question: "Which is a complex sentence?", options: ["Although tired, she studied.", "She is tired.", "She studied.", "Tired girl studied."], correct: 0, explanation: "Complex sentence has dependent clause (Although tired) + independent clause." }
+                    { type: "english", question: "Which example is a complex sentence?", options: ["Although tired, she studied.", "She is tired.", "She studied.", "Tired girl studied."], correct: 0, explanation: "Complex sentence has dependent clause (Although tired) + independent clause." }
                 ]
             },
             {
@@ -1195,7 +1793,7 @@ const gradeLessons = {
                     { type: "english", question: "What is a compound-complex sentence?", options: ["Has 2+ independent and 1+ dependent clauses", "Only independent clauses", "Only dependent clauses", "Single clause"], correct: 0, explanation: "Compound-complex sentences have multiple independent clauses and at least one dependent clause." },
                     { type: "english", question: "What is anaphora?", options: ["Repetition of words at start of clauses", "A metaphor", "Alliteration", "Rhyme"], correct: 0, explanation: "Anaphora repeats words at the beginning: 'Every day, every night, every moment...'" },
                     { type: "english", question: "What is parallel structure?", options: ["Same grammatical form in list", "Equal paragraphs", "Similar sentences", "Balanced page"], correct: 0, explanation: "Parallel structure uses same grammatical form: 'I like reading, writing, and singing.'" },
-                    { type: "english", question: "Which is correct?", options: ["Neither he nor she is coming.", "Neither he nor she are coming.", "Neither he nor she were coming.", "Neither he or she is coming."], correct: 0, explanation: "With 'neither...nor', verb agrees with nearest subject (she → is)." }
+                    { type: "english", question: "Which sentence is grammatically correct?", options: ["Neither he nor she is coming.", "Neither he nor she are coming.", "Neither he nor she were coming.", "Neither he or she is coming."], correct: 0, explanation: "With 'neither...nor', verb agrees with nearest subject (she → is)." }
                 ]
             },
             {
@@ -1234,21 +1832,113 @@ const gradeLessons = {
     }
 };
 
+// Convert compact topic packs from the extra topic files into lesson objects
+function normalizeExtraTopic(subject, topic) {
+    const [title, questionStrings] = topic;
+    return {
+        title,
+        questions: questionStrings.map(line => {
+            const parts = line.split('|');
+            return {
+                type: subject,
+                question: parts[0].trim(),
+                options: parts.slice(1, 5).map(option => option.trim()),
+                correct: Number(parts[5]),
+                explanation: parts.slice(6).join('|').trim()
+            };
+        })
+    };
+}
+
 // Helper function to get lessons for current grade
 function getLessons() {
-    return gradeLessons[state.grade] || gradeLessons[4]; // Default to grade 4
+    const grade = state.grade || 4;
+    const base = gradeLessons[grade] || gradeLessons[4];
+    const extra = (window.extraGradeLessons && window.extraGradeLessons[grade]) || {};
+    const subjects = ['math', 'science', 'english', 'social'];
+    const merged = {};
+
+    subjects.forEach(subject => {
+        const baseLessons = (base[subject] || []).slice();
+        const extraLessons = (extra[subject] || []).map(topic => normalizeExtraTopic(subject, topic));
+        merged[subject] = baseLessons.concat(extraLessons);
+    });
+
+    return merged;
+}
+
+// Keep progress totals in sync with the expanded topic packs
+function syncProgressTotals() {
+    if (!state.progress) return;
+
+    const lessons = getLessons();
+    ['math', 'science', 'english', 'social'].forEach(subject => {
+        const total = (lessons[subject] || []).length;
+        if (!state.progress[subject]) {
+            state.progress[subject] = { completed: 0, total, score: 0 };
+        }
+        state.progress[subject].total = total;
+        if (state.progress[subject].completed > total) {
+            state.progress[subject].completed = total;
+        }
+    });
+
+    saveProgress();
+}
+
+// Show the real number of lessons on the course cards
+function updateCourseLessonCounts() {
+    const lessons = getLessons();
+    ['math', 'science', 'english', 'social'].forEach(subject => {
+        const count = document.getElementById(`${subject}-lessons-count`);
+        if (count) count.textContent = `${lessons[subject].length} Lessons`;
+    });
+}
+
+// Fill the home-page subject previews with the current grade's topics
+function updateSubjectPreviews() {
+    const lessons = getLessons();
+    ['math', 'science', 'english', 'social'].forEach(subject => {
+        const list = document.querySelector(`#${subject}-detail .topic-list`);
+        if (!list) return;
+
+        const titles = lessons[subject].map(lesson => lesson.title);
+        const shown = titles.slice(0, 10);
+        list.innerHTML = shown.map(title => `<li>${title}</li>`).join('');
+        if (titles.length > shown.length) {
+            list.innerHTML += `<li>+${titles.length - shown.length} more topics</li>`;
+        }
+    });
 }
 
 // Page Navigation
 function showPage(page) {
+    const pageEl = document.getElementById(page + '-page');
+    if (!pageEl) return;
+
     document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-    document.getElementById(page + '-page').classList.add('active');
+    pageEl.classList.add('active');
     state.currentPage = page;
+    document.body.classList.toggle('lesson-open', page === 'lesson');
+
+    document.querySelectorAll('.mobile-nav-item').forEach(item => {
+        const active = item.dataset.page === page;
+        item.classList.toggle('active', active);
+        if (active) item.setAttribute('aria-current', 'page');
+        else item.removeAttribute('aria-current');
+    });
+
     window.scrollTo(0, 0);
 
     if (page === 'progress') {
         updateProgressPage();
     }
+
+    if (page === 'settings') {
+        updateSettingsPage();
+    }
+
+    updateTutorContext();
 }
 
 // Subject Tabs
@@ -1318,6 +2008,7 @@ function shuffleArray(array) {
 
 // Load Question
 function loadQuestion() {
+    state.lastAnswerCorrect = null;
     const lesson = getLessons()[state.currentSubject][state.currentLesson];
     
     // Use shuffled questions if available, otherwise use original
@@ -1357,6 +2048,7 @@ function loadQuestion() {
     `;
 
     document.getElementById('lesson-content').innerHTML = questionHTML;
+    updateTutorContext();
 }
 
 // Select Answer
@@ -1383,11 +2075,15 @@ function selectAnswer(index) {
 
     // Show correct/incorrect
     buttons[correctShuffledIndex].classList.add('correct');
-    if (index !== correctShuffledIndex) {
+    state.lastAnswerCorrect = index === correctShuffledIndex;
+    if (!state.lastAnswerCorrect) {
         buttons[index].classList.add('incorrect');
     } else {
         state.score++;
     }
+
+    // Play sound / haptic feedback
+    playFeedback(index === correctShuffledIndex);
 
     // Show feedback
     feedback.classList.add('show');
@@ -1406,11 +2102,12 @@ function selectAnswer(index) {
 // Next Question
 function nextQuestion() {
     const lesson = getLessons()[state.currentSubject][state.currentLesson];
-    
+
     // Use shuffled questions if available
     const questions = state.currentShuffledQuestions || lesson.questions;
 
     state.currentQuestionIndex++;
+    state.lastAnswerCorrect = null;
 
     if (state.currentQuestionIndex >= questions.length) {
         // Lesson complete - mark it as completed today
@@ -1515,6 +2212,8 @@ function addActivity(subject, lessonTitle, score) {
 
 // Update Progress Page
 function updateProgressPage() {
+    syncProgressTotals();
+
     const subjects = ['math', 'science', 'english', 'social'];
     let totalLessons = 0;
     let totalScore = 0;
@@ -1560,15 +2259,42 @@ function updateProgressPage() {
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
     showPage('home');
-    
+
+    // Apply the expanded topic packs for the selected grade
+    syncProgressTotals();
+    updateCourseLessonCounts();
+    updateSubjectPreviews();
+
     // Update user UI
     updateUserUI();
-    
+    updateSettingsPage();
+    updateInstallUI();
+    applyTheme();
+
+    // Follow the system theme while in Auto mode
+    const themeQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    if (themeQuery.addEventListener) {
+        themeQuery.addEventListener('change', () => {
+            if ((state.settings.theme || 'auto') === 'auto') applyTheme();
+        });
+    }
+
+    // Hide install prompts if the app is launched as an installed app
+    const standaloneQuery = window.matchMedia('(display-mode: standalone)');
+    if (standaloneQuery.addEventListener) {
+        standaloneQuery.addEventListener('change', updateInstallUI);
+    }
+
+    window.addEventListener('appinstalled', () => {
+        localStorage.setItem('appInstalled', '1');
+        updateInstallUI();
+    });
+
     // Show grade badge if grade is already selected
     if (state.grade) {
         document.getElementById('grade-badge').style.display = 'inline-block';
         document.getElementById('current-grade-display').textContent = state.grade;
-        document.querySelector('.hero-subtitle').textContent = 
+        document.querySelector('.hero-subtitle').textContent =
             `Your personal tutor for Class ${state.grade} subjects. Learn by doing with interactive lessons that make concepts click.`;
     } else {
         // Show grade modal for first-time users
@@ -1576,11 +2302,14 @@ document.addEventListener('DOMContentLoaded', () => {
             showGradeModal();
         }, 500);
     }
-    
+
     // Register service worker for PWA
     if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('sw.js')
-            .then(reg => console.log('Service Worker registered'))
-            .catch(err => console.log('Service Worker registration failed'));
+        navigator.serviceWorker.register('sw.js?ver=' + APP_VERSION, { updateViaCache: 'none' })
+            .then(registration => {
+                setupAppUpdates(registration);
+                return registration.update();
+            })
+            .catch(err => console.log('Service Worker registration failed', err));
     }
 });
