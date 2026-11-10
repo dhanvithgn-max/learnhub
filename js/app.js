@@ -782,9 +782,11 @@ function loadGradeContent(grade) {
     console.log(`Loading content for Class ${grade}`);
 }
 
-// Get today's date string
+// Get today's date string (local time, so the daily limit resets at local midnight)
 function getToday() {
-    return new Date().toISOString().split('T')[0];
+    const now = new Date();
+    const local = new Date(now.getTime() - now.getTimezoneOffset() * 60000);
+    return local.toISOString().split('T')[0];
 }
 
 // Check if lesson was completed today
@@ -799,6 +801,21 @@ function markLessonCompleted(subject, lessonIndex) {
     state.completedLessons[key] = getToday();
     localStorage.setItem('completedLessons', JSON.stringify(state.completedLessons));
 }
+
+// Has the user already completed a lesson in this subject today?
+function hasCompletedLessonToday(subject) {
+    const today = getToday();
+    return Object.keys(state.completedLessons || {}).some(
+        key => key.startsWith(subject + '_') && state.completedLessons[key] === today
+    );
+}
+
+const SUBJECT_NAMES = {
+    math: 'Math',
+    science: 'Science',
+    english: 'English',
+    social: 'Social Studies'
+};
 
 // Lessons Data - Grade Specific
 const gradeLessons = {
@@ -1893,7 +1910,10 @@ function updateCourseLessonCounts() {
     const lessons = getLessons();
     ['math', 'science', 'english', 'social'].forEach(subject => {
         const count = document.getElementById(`${subject}-lessons-count`);
-        if (count) count.textContent = `${lessons[subject].length} Lessons`;
+        if (!count) return;
+        count.textContent = hasCompletedLessonToday(subject)
+            ? 'Done for today ✓'
+            : `${lessons[subject].length} Lessons`;
     });
 }
 
@@ -1932,6 +1952,10 @@ function showPage(page) {
 
     window.scrollTo(0, 0);
 
+    if (page === 'courses') {
+        updateCourseLessonCounts();
+    }
+
     if (page === 'progress') {
         updateProgressPage();
     }
@@ -1955,18 +1979,28 @@ document.querySelectorAll('.subject-tab').forEach(tab => {
 
 // Start Subject
 function startSubject(subject) {
+    const lessons = getLessons()[subject] || [];
+    if (!lessons.length) return;
+
+    // One lesson per subject per day
+    if (hasCompletedLessonToday(subject)) {
+        alert(`You've already completed today's ${SUBJECT_NAMES[subject]} lesson. Come back tomorrow for the next one!`);
+        return;
+    }
+
+    // Resume at the next unfinished lesson instead of restarting at lesson 1
+    const completed = Math.min(state.progress[subject]?.completed || 0, lessons.length);
+    if (completed >= lessons.length) {
+        alert(`You've completed all ${SUBJECT_NAMES[subject]} lessons. Great job!`);
+        return;
+    }
+
     state.currentSubject = subject;
-    state.currentLesson = 0;
+    state.currentLesson = completed;
     state.currentQuestionIndex = 0;
     state.score = 0;
-    
-    // Check if first lesson was completed today - if so, keep same order
-    if (!isLessonCompletedToday(subject, 0)) {
-        // Shuffle questions for today
-        state.currentShuffledQuestions = shuffleArray([...getLessons()[subject][0].questions]);
-    }
-    // If completed today, state.currentShuffledQuestions stays null, using original order
-    
+    state.currentShuffledQuestions = shuffleArray([...lessons[completed].questions]);
+
     showPage('lesson');
     loadLesson();
 }
@@ -2140,17 +2174,19 @@ function completeLesson() {
     addActivity(subject, lesson.title, scorePercent);
 
     // Show completion screen
+    const isLastLesson = lessonIndex >= getLessons()[subject].length - 1;
     document.getElementById('lesson-content').innerHTML = `
         <div class="lesson-complete">
             <div class="complete-icon">🎉</div>
             <h2 class="complete-title">Lesson Complete!</h2>
             <div class="complete-score">${scorePercent}%</div>
             <p class="complete-message">${getScoreMessage(scorePercent)}</p>
+            <p class="complete-message">${isLastLesson
+                ? `You've finished all ${SUBJECT_NAMES[subject]} lessons!`
+                : `That's today's ${SUBJECT_NAMES[subject]} lesson done — come back tomorrow for the next one.`}</p>
             <div class="complete-actions">
                 <button class="btn-secondary" onclick="showPage('courses')">Back to Courses</button>
-                ${lessonIndex < getLessons()[subject].length - 1 ? 
-                    `<button class="btn-primary" onclick="nextLesson()">Next Lesson →</button>` : 
-                    `<button class="btn-primary" onclick="showPage('progress')">View Progress</button>`}
+                <button class="btn-primary" onclick="showPage('progress')">View Progress</button>
             </div>
         </div>
     `;
@@ -2158,6 +2194,13 @@ function completeLesson() {
 
 // Next Lesson
 function nextLesson() {
+    // One lesson per subject per day
+    if (hasCompletedLessonToday(state.currentSubject)) {
+        alert(`You've completed today's ${SUBJECT_NAMES[state.currentSubject]} lesson. Come back tomorrow!`);
+        showPage('courses');
+        return;
+    }
+
     state.currentLesson++;
     state.currentQuestionIndex = 0;
     state.score = 0;
