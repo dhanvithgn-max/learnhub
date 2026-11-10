@@ -1,4 +1,4 @@
-const CACHE_NAME = 'learnhub-0c34339';
+const CACHE_NAME = 'learnhub-2da2b26';
 const urlsToCache = [
     './',
     './index.html',
