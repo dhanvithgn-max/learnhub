@@ -57,7 +57,7 @@
     </nav>
 
     <!-- Grade Selection Modal -->
-    <div class="modal-overlay" id="grade-modal" style="display:none;">
+    <div class="modal-overlay" id="grade-modal" role="dialog" aria-modal="true" aria-label="Select your class" style="display:none;">
         <div class="modal-content">
             <button class="modal-close" onclick="closeGradeModal()">×</button>
             <div class="modal-icon">🎓</div>
@@ -79,7 +79,7 @@
     </div>
 
     <!-- Sign In Modal -->
-    <div class="modal-overlay" id="signin-modal" style="display:none;">
+    <div class="modal-overlay" id="signin-modal" role="dialog" aria-modal="true" aria-label="Sign in" style="display:none;">
         <div class="modal-content">
             <button class="modal-close" onclick="closeSignInModal()">×</button>
             <div class="modal-icon">👋</div>
@@ -101,7 +101,7 @@
     </div>
 
     <!-- Sign Up Modal -->
-    <div class="modal-overlay" id="signup-modal" style="display:none;">
+    <div class="modal-overlay" id="signup-modal" role="dialog" aria-modal="true" aria-label="Create account" style="display:none;">
         <div class="modal-content">
             <button class="modal-close" onclick="closeSignUpModal()">×</button>
             <div class="modal-icon">🚀</div>
@@ -127,7 +127,7 @@
     </div>
 
     <!-- Profile Modal -->
-    <div class="modal-overlay" id="profile-modal" style="display:none;">
+    <div class="modal-overlay" id="profile-modal" role="dialog" aria-modal="true" aria-label="Your profile" style="display:none;">
         <div class="modal-content">
             <button class="modal-close" onclick="closeProfileModal()">×</button>
             <div class="modal-icon">👤</div>
@@ -151,6 +151,8 @@
         </div>
     </div>
 
+    <!-- Main content -->
+    <main id="main-content">
     <!-- Home Page -->
     <div id="home-page" class="page active">
         <!-- Hero Section -->
@@ -397,20 +399,20 @@
                 </div>
                 <div class="footer-links">
                     <div class="footer-col">
-                        <h4>Subjects</h4>
+                        <h3>Subjects</h3>
                         <a href="#">Math</a>
                         <a href="#">Science</a>
                         <a href="#">English</a>
                         <a href="#">Social Studies</a>
                     </div>
                     <div class="footer-col">
-                        <h4>Company</h4>
+                        <h3>Company</h3>
                         <a href="#">About Us</a>
                         <a href="#">Careers</a>
                         <a href="#">Blog</a>
                     </div>
                     <div class="footer-col">
-                        <h4>Support</h4>
+                        <h3>Support</h3>
                         <a href="#">Help Center</a>
                         <a href="#">Contact</a>
                         <a href="#">Privacy</a>
@@ -433,7 +435,7 @@
             <div class="course-card" onclick="startSubject('math')">
                 <div class="course-icon">📐</div>
                 <div class="course-info">
-                    <h3>Mathematics</h3>
+                    <h2>Mathematics</h3>
                     <p>Numbers, operations, geometry, and more</p>
                     <div class="course-meta">
                         <span class="lessons-count" id="math-lessons-count">9 Lessons</span>
@@ -453,7 +455,7 @@
             <div class="course-card" onclick="startSubject('science')">
                 <div class="course-icon">🔬</div>
                 <div class="course-info">
-                    <h3>Science</h3>
+                    <h2>Science</h3>
                     <p>Physics, chemistry, biology, and earth science</p>
                     <div class="course-meta">
                         <span class="lessons-count" id="science-lessons-count">8 Lessons</span>
@@ -473,7 +475,7 @@
             <div class="course-card" onclick="startSubject('english')">
                 <div class="course-icon">📖</div>
                 <div class="course-info">
-                    <h3>English</h3>
+                    <h2>English</h3>
                     <p>Grammar, vocabulary, reading, and writing</p>
                     <div class="course-meta">
                         <span class="lessons-count" id="english-lessons-count">8 Lessons</span>
@@ -493,7 +495,7 @@
             <div class="course-card" onclick="startSubject('social')">
                 <div class="course-icon">🌍</div>
                 <div class="course-info">
-                    <h3>Social Studies</h3>
+                    <h2>Social Studies</h3>
                     <p>History, geography, civics, and culture</p>
                     <div class="course-meta">
                         <span class="lessons-count" id="social-lessons-count">7 Lessons</span>
@@ -518,7 +520,7 @@
         <div class="lesson-header">
             <button class="btn-back" onclick="showPage('courses')">← Back</button>
             <div class="lesson-title-bar">
-                <h2 id="lesson-title">Lesson Title</h2>
+                <h1 id="lesson-title">Lesson Title</h1>
                 <div class="lesson-progress-bar">
                     <div class="lesson-progress-fill" id="lesson-progress-fill"></div>
                 </div>
@@ -530,7 +532,7 @@
             </div>
             <div class="lesson-sidebar">
                 <div class="sidebar-card">
-                    <h4>Your Progress</h4>
+                    <h2>Your Progress</h2>
                     <div class="progress-stats">
                         <div class="stat-item">
                             <span class="stat-value" id="current-question">1</span>
@@ -544,7 +546,7 @@
                     </div>
                 </div>
                 <div class="sidebar-card">
-                    <h4>Lesson Topics</h4>
+                    <h2>Lesson Topics</h2>
                     <ul class="topic-progress-list" id="topic-progress-list">
                         <!-- Dynamic topics -->
                     </ul>
@@ -594,7 +596,7 @@
                 <div class="subject-progress-card">
                     <div class="subject-header">
                         <span class="subject-icon">📐</span>
-                        <h3>Mathematics</h3>
+                        <h2>Mathematics</h3>
                     </div>
                     <div class="progress-bar-container">
                         <div class="progress-bar">
@@ -606,7 +608,7 @@
                 <div class="subject-progress-card">
                     <div class="subject-header">
                         <span class="subject-icon">🔬</span>
-                        <h3>Science</h3>
+                        <h2>Science</h3>
                     </div>
                     <div class="progress-bar-container">
                         <div class="progress-bar">
@@ -618,7 +620,7 @@
                 <div class="subject-progress-card">
                     <div class="subject-header">
                         <span class="subject-icon">📖</span>
-                        <h3>English</h3>
+                        <h2>English</h3>
                     </div>
                     <div class="progress-bar-container">
                         <div class="progress-bar">
@@ -630,7 +632,7 @@
                 <div class="subject-progress-card">
                     <div class="subject-header">
                         <span class="subject-icon">🌍</span>
-                        <h3>Social Studies</h3>
+                        <h2>Social Studies</h3>
                     </div>
                     <div class="progress-bar-container">
                         <div class="progress-bar">
@@ -641,7 +643,7 @@
                 </div>
             </div>
             <div class="recent-activity">
-                <h3>Recent Activity</h3>
+                <h2>Recent Activity</h2>
                 <div class="activity-list" id="activity-list">
                     <div class="activity-empty">No activity yet. Start learning!</div>
                 </div>
@@ -659,14 +661,14 @@
             <div class="settings-card settings-profile-card">
                 <div class="settings-avatar" id="settings-avatar">G</div>
                 <div class="settings-profile-info">
-                    <h3 id="settings-name">Guest</h3>
+                    <h2 id="settings-name">Guest</h2>
                     <p id="settings-email">Not signed in</p>
                 </div>
                 <button class="btn-secondary settings-auth-btn" id="settings-auth-btn" onclick="showSignInModal()">Sign In</button>
             </div>
 
             <div class="settings-card">
-                <h3 class="settings-card-title">Appearance</h3>
+                <h2 class="settings-card-title">Appearance</h2>
                 <div class="setting-row">
                     <div class="setting-info">
                         <span class="setting-icon">🌙</span>
@@ -684,7 +686,7 @@
             </div>
 
             <div class="settings-card">
-                <h3 class="settings-card-title">Learning</h3>
+                <h2 class="settings-card-title">Learning</h2>
                 <div class="setting-row">
                     <div class="setting-info">
                         <span class="setting-icon">🎓</span>
@@ -704,7 +706,7 @@
                         </div>
                     </div>
                     <label class="toggle">
-                        <input type="checkbox" id="setting-sound" onchange="toggleSetting('sound', this.checked)">
+                        <input type="checkbox" id="setting-sound" aria-label="Sound effects" onchange="toggleSetting('sound', this.checked)">
                         <span class="toggle-slider"></span>
                     </label>
                 </div>
@@ -717,14 +719,14 @@
                         </div>
                     </div>
                     <label class="toggle">
-                        <input type="checkbox" id="setting-haptics" onchange="toggleSetting('haptics', this.checked)">
+                        <input type="checkbox" id="setting-haptics" aria-label="Haptic feedback" onchange="toggleSetting('haptics', this.checked)">
                         <span class="toggle-slider"></span>
                     </label>
                 </div>
             </div>
 
             <div class="settings-card">
-                <h3 class="settings-card-title">Data & Privacy</h3>
+                <h2 class="settings-card-title">Data & Privacy</h2>
                 <div class="setting-row">
                     <div class="setting-info">
                         <span class="setting-icon">🔄</span>
@@ -748,7 +750,7 @@
             </div>
 
             <div class="settings-card">
-                <h3 class="settings-card-title">About</h3>
+                <h2 class="settings-card-title">About</h2>
                 <div class="setting-row">
                     <div class="setting-info">
                         <span class="setting-icon">◆</span>
@@ -792,6 +794,7 @@
             </div>
         </div>
     </div>
+    </main>
 
     <!-- Mobile bottom navigation -->
     <nav class="mobile-nav" aria-label="Mobile navigation">
@@ -827,12 +830,12 @@
     </nav>
 
     <!-- AI Tutor -->
-    <button class="tutor-fab" id="tutor-fab" onclick="toggleTutor()" aria-label="Ask the AI tutor">
+    <button class="tutor-fab" id="tutor-fab" onclick="toggleTutor()" aria-label="Ask Kai, the AI tutor">
         <span class="tutor-fab-spark">✦</span>
         <span class="tutor-fab-text">Ask Kai</span>
     </button>
 
-    <div class="tutor-panel" id="tutor-panel" aria-hidden="true" role="dialog" aria-label="AI tutor">
+    <div class="tutor-panel" id="tutor-panel" aria-hidden="true" inert role="dialog" aria-label="AI tutor">
         <div class="tutor-header">
             <div class="tutor-brand">
                 <div class="tutor-avatar">K</div>

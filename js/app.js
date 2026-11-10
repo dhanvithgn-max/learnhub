@@ -506,6 +506,8 @@ function toggleTutor(forceOpen) {
 
     panel.classList.toggle('open', open);
     panel.setAttribute('aria-hidden', String(!open));
+    if (open) panel.removeAttribute('inert');
+    else panel.setAttribute('inert', '');
     fab.classList.toggle('hidden', open);
 
     if (open) {

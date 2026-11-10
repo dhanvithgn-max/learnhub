@@ -10,6 +10,10 @@
     --heading: #2D3142;
     --accent: #FF6B35;
     --accent-hover: #E85D2C;
+    --accent-strong: #C2410C;
+    --accent-strong-hover: #9A3412;
+    --accent-text: #C2410C;
+    --error-text: #DC2626;
     --background: #FAFBFC;
     --card-bg: #FFFFFF;
     --surface-alt: #FAFBFC;
@@ -35,6 +39,8 @@
     --heading: #F8FAFC;
     --accent: #FF7A45;
     --accent-hover: #FF8F65;
+    --accent-text: #FF7A45;
+    --error-text: #F87171;
     --background: #0F172A;
     --card-bg: #1E293B;
     --surface-alt: #0B1220;
@@ -235,7 +241,7 @@ body {
 .btn-primary {
     padding: 14px 28px;
     border: none;
-    background: var(--accent);
+    background: var(--accent-strong);
     color: white;
     font-size: 16px;
     font-weight: 600;
@@ -245,7 +251,7 @@ body {
 }
 
 .btn-primary:hover {
-    background: var(--accent-hover);
+    background: var(--accent-strong-hover);
     transform: translateY(-2px);
 }
 
@@ -602,11 +608,11 @@ body {
 }
 
 .cta .btn-primary {
-    background: var(--accent);
+    background: var(--accent-strong);
 }
 
 .cta .btn-primary:hover {
-    background: #FF8F65;
+    background: var(--accent-strong-hover);
 }
 
 /* Footer */
@@ -636,7 +642,7 @@ body {
     gap: 40px;
 }
 
-.footer-col h4 {
+.footer-col h3 {
     font-size: 16px;
     font-weight: 600;
     margin-bottom: 16px;
@@ -661,7 +667,7 @@ body {
 }
 
 .footer-bottom p {
-    color: rgba(255, 255, 255, 0.5);
+    color: rgba(255, 255, 255, 0.7);
     font-size: 14px;
 }
 
@@ -718,7 +724,7 @@ body {
     flex: 1;
 }
 
-.course-info h3 {
+.course-info h2 {
     font-size: 20px;
     font-weight: 600;
     margin-bottom: 4px;
@@ -772,6 +778,9 @@ body {
     font-size: 14px;
     font-weight: 600;
     color: var(--heading);
+    background: var(--card-bg);
+    border-radius: 50%;
+    padding: 2px 4px;
 }
 
 /* Lesson Page */
@@ -809,7 +818,7 @@ body {
     flex: 1;
 }
 
-.lesson-title-bar h2 {
+.lesson-title-bar h1 {
     font-size: 18px;
     font-weight: 600;
     color: var(--heading);
@@ -861,7 +870,7 @@ body {
     border: 1px solid var(--border);
 }
 
-.sidebar-card h4 {
+.sidebar-card h2 {
     font-size: 14px;
     font-weight: 600;
     margin-bottom: 16px;
@@ -897,7 +906,7 @@ body {
     text-align: center;
     font-size: 18px;
     font-weight: 600;
-    color: var(--accent);
+    color: var(--accent-text);
 }
 
 .topic-progress-list {
@@ -1165,7 +1174,7 @@ body {
     font-size: 24px;
 }
 
-.subject-header h3 {
+.subject-header h2 {
     font-size: 16px;
     font-weight: 600;
     color: var(--heading);
@@ -1262,7 +1271,7 @@ body {
 /* Grade Badge */
 .grade-badge {
     padding: 8px 16px;
-    background: var(--accent);
+    background: var(--accent-strong);
     color: white;
     border-radius: 20px;
     font-size: 14px;
@@ -1614,7 +1623,7 @@ body {
 }
 
 .setting-value-btn.danger {
-    color: var(--error);
+    color: var(--error-text);
 }
 
 .setting-value-btn.danger:hover {
@@ -2307,7 +2316,7 @@ body {
 
 .theme-btn.active {
     background: var(--card-bg);
-    color: var(--accent);
+    color: var(--accent-text);
     box-shadow: var(--shadow);
 }
 
@@ -2531,7 +2540,7 @@ body {
         min-width: 0;
     }
 
-    .course-info h3 {
+    .course-info h2 {
         font-size: 17px;
     }
 
@@ -2573,7 +2582,7 @@ body {
         min-width: 0;
     }
 
-    .lesson-title-bar h2 {
+    .lesson-title-bar h1 {
         margin-bottom: 6px;
         font-size: 15px;
         white-space: nowrap;
@@ -2943,7 +2952,7 @@ body {
         font-size: 28px;
     }
 
-    .course-info h3 {
+    .course-info h2 {
         font-size: 16px;
     }
 
@@ -2956,7 +2965,7 @@ body {
         height: 44px;
     }
 
-    .lesson-title-bar h2 {
+    .lesson-title-bar h1 {
         font-size: 14px;
     }
 
