@@ -1,0 +1,36 @@
+name: Bump service worker cache
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - 'sw.js'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: bump-sw
+  cancel-in-progress: true
+
+jobs:
+  bump:
+    if: "!contains(github.event.head_commit.message, '[skip ci]')"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Bump CACHE_NAME to commit SHA
+        run: |
+          SHA=$(git rev-parse --short HEAD)
+          sed -i "s|const CACHE_NAME = 'learnhub-[^']*';|const CACHE_NAME = 'learnhub-${SHA}';|" sw.js
+          grep -q "const CACHE_NAME = 'learnhub-${SHA}';" sw.js
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add sw.js
+          if git diff --cached --quiet; then
+            echo "Cache name already up to date"
+            exit 0
+          fi
+          git commit -m "chore: bump service worker cache to ${SHA} [skip ci]"
+          git push
